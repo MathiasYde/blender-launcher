@@ -9,15 +9,17 @@ struct BlenderInstance {
 }
 
 struct Application {
+	version: String,
 	blender_instances: Vec<BlenderInstance>,
 }
 
 impl App for Application {
 	fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
 		CentralPanel::default().show(ctx, |ui| {
-			ui.heading("Blender Launcher v0.1.0");
+			ui.heading(format!("Blender Launcher v{}", self.version));
 			ui.separator();
 
+			// TODO(mathias): refactor this into a ScrollArea
 			self.blender_instances.iter().for_each(|instance| {
 				self.build_instance_ui(ui, instance);
 				ui.separator();
@@ -26,17 +28,10 @@ impl App for Application {
 	}
 }
 
-impl Default for Application {
-	fn default() -> Self {
-		Self {
-			blender_instances: Vec::new(),
-		}
-	}
-}
-
 impl Application {
 	fn new(_cc: &eframe::CreationContext<'_>) -> Self {
 		Self {
+			version: "0.1.0".to_string(),
 			blender_instances: vec![
 				BlenderInstance {
 					name: "Blender 4.0.1".to_string(),
