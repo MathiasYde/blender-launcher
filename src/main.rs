@@ -77,9 +77,9 @@ impl Application {
 		let mut yaml = String::new();
 		file.read_to_string(&mut yaml).expect("Unable to read config file");
 
-		let docs = YamlLoader::load_from_str(&*yaml).unwrap();
-		let _settings_doc = &docs[0]["settings"];
-		let instances_doc = &docs[0]["instances"];
+		let doc = YamlLoader::load_from_str(&*yaml).unwrap()[0].clone();
+		let _settings_doc = &doc["settings"];
+		let instances_doc = &doc["instances"];
 
 		instances_doc.as_vec().unwrap().iter().for_each(|instance_doc| {
 			let name = instance_doc["name"].as_str().unwrap();
