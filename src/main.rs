@@ -99,6 +99,7 @@ impl Application {
 }
 
 fn main() {
+	env_logger::init();
 	log::info!("Initializing Blender Launcher application");
 
 	run_native(
