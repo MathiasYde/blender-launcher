@@ -2,7 +2,7 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 use eframe::{Frame, NativeOptions, run_native};
-use egui::{CentralPanel, Context};
+use egui::{CentralPanel, Context, ScrollArea};
 use log;
 use std::process::Command;
 
@@ -25,11 +25,12 @@ impl eframe::App for Application {
 			ui.heading(format!("Blender Launcher v{}", self.version));
 			ui.separator();
 
-			// TODO(mathias): refactor this into a ScrollArea
-			self.blender_instances.iter().for_each(|instance| {
-				self.build_instance_ui(ui, instance);
-				ui.separator();
-			});
+			ScrollArea::vertical().show(ui, |ui| {
+				self.blender_instances.iter().for_each(|instance| {
+					self.build_instance_ui(ui, instance);
+					ui.separator();
+				});
+			})
 		});
 	}
 }
