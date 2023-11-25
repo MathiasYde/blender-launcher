@@ -1,4 +1,4 @@
-use eframe::{App, Frame, NativeOptions, run_native};
+use eframe::{Frame, NativeOptions, run_native};
 use egui::{CentralPanel, Context};
 use log;
 use std::process::Command;
@@ -13,7 +13,7 @@ struct Application {
 	blender_instances: Vec<BlenderInstance>,
 }
 
-impl App for Application {
+impl eframe::App for Application {
 	fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
 		CentralPanel::default().show(ctx, |ui| {
 			ui.heading(format!("Blender Launcher v{}", self.version));
