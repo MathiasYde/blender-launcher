@@ -81,6 +81,7 @@ impl Application {
 		modal.show_dialog();
 	}
 
+	/// Load the configuration of Blender Launcher from a YAML file
 	fn load_configuration(config_filepath: String, app: &mut Application) {
 		log::info!("Loading configuration from: {}", config_filepath);
 
@@ -104,6 +105,7 @@ impl Application {
 		});
 	}
 
+	/// Save the configuration of Blender Launcher to a YAML file
 	fn save_configuration(config_filepath: String, app: &Application) {
 		log::info!("Saving configuration to: {}", config_filepath);
 
