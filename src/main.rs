@@ -92,7 +92,11 @@ impl Application {
 	fn launch_instance(&self, instance: &BlenderInstance) {
 		log::info!("Launching Blender instance: {}", instance.name);
 
+		// pass arguments to the Blender instance
+		// except the first one which is the path to this executable
+		let args: Vec<String> = env::args().into_iter().skip(1).collect();
 		Command::new(&instance.path)
+			.args(args)
 			.spawn()
 			.expect("Unable to launch Blender instance");
 	}
