@@ -5,6 +5,7 @@ use eframe::{Frame, NativeOptions, run_native};
 use egui::{CentralPanel, Context, ScrollArea};
 use log;
 use std::process::Command;
+use egui_modal::{Modal, ModalStyle};
 
 extern crate yaml_rust;
 use yaml_rust::{Yaml, YamlLoader};
@@ -57,9 +58,18 @@ impl Application {
 	}
 
 	fn build_instance_ui(&self, ui: &mut egui::Ui, instance: &BlenderInstance) {
+		let mut modal = Modal::new(ui.ctx(), "Error!");
+
 		ui.horizontal(|ui| {
 			if ui.button("Launch").clicked() {
-				self.launch_instance(instance);
+				if let Err(error) = self.launch_instance(instance) {
+					log::error!("Unable to launch Blender instance: {}", error);
+
+					modal.dialog()
+						.with_title("Error!")
+						.with_body(format!("Unable to launch Blender instance: {}", error))
+						.open();
+				}
 			}
 
 			ui.vertical(|ui| {
@@ -67,6 +77,8 @@ impl Application {
 				ui.label(&instance.path);
 			});
 		});
+
+		modal.show_dialog();
 	}
 
 	fn load_configuration(config_filepath: String, app: &mut Application) {
@@ -119,7 +131,8 @@ impl Application {
 		yaml_file.write_all(yaml_text.as_bytes()).expect("Unable to write config file");
 	}
 
-	fn launch_instance(&self, instance: &BlenderInstance) {
+	/// Launch a Blender instance
+	fn launch_instance(&self, instance: &BlenderInstance) -> Result<std::process::Child, std::io::Error> {
 		log::info!("Launching Blender instance: {}", instance.name);
 
 		// pass arguments to the Blender instance
@@ -128,7 +141,6 @@ impl Application {
 		Command::new(&instance.path)
 			.args(args)
 			.spawn()
-			.expect("Unable to launch Blender instance");
 	}
 }
 
