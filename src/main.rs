@@ -16,7 +16,7 @@ struct BlenderInstance {
 
 struct Application {
 	version: String,
-	blender_instances: Vec<BlenderInstance>,
+	instances: Vec<BlenderInstance>,
 }
 
 impl eframe::App for Application {
@@ -26,7 +26,7 @@ impl eframe::App for Application {
 			ui.separator();
 
 			ScrollArea::vertical().show(ui, |ui| {
-				self.blender_instances.iter().for_each(|instance| {
+				self.instances.iter().for_each(|instance| {
 					self.build_instance_ui(ui, instance);
 					ui.separator();
 				});
@@ -39,7 +39,7 @@ impl Default for Application {
 	fn default() -> Self {
 		Self {
 			version: env!("CARGO_PKG_VERSION").to_string(),
-			blender_instances: Vec::new(),
+			instances: Vec::new(),
 		}
 	}
 }
@@ -83,7 +83,7 @@ impl Application {
 			let name = instance_doc["name"].as_str().unwrap();
 			let path = instance_doc["path"].as_str().unwrap();
 
-			app.blender_instances.push(BlenderInstance {
+			app.instances.push(BlenderInstance {
 				name: name.to_string(),
 				path: path.to_string(),
 			});
