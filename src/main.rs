@@ -9,6 +9,8 @@ use std::process::Command;
 extern crate yaml_rust;
 use yaml_rust::{Yaml, YamlLoader};
 
+const CONFIG_FILE_ENVIRONMENT_KEY: &str = "BLENDER_LAUNCHER_CONFIG_FILEPATH";
+
 struct BlenderInstance {
 	name: String,
 	path: String,
@@ -48,7 +50,7 @@ impl Application {
 	fn new(_cc: &eframe::CreationContext<'_>) -> Self {
 		let mut app = Application::default();
 
-		let config_filepath = env::var("BLENDER_LAUNCHER_CONFIG_FILEPATH");
+		let config_filepath = env::var(CONFIG_FILE_ENVIRONMENT_KEY);
 		Application::load_configuration(config_filepath.unwrap(), &mut app);
 
 		return app;
