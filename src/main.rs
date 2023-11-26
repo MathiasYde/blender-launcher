@@ -92,10 +92,14 @@ impl Application {
 
 	fn build_no_instances_ui(&mut self, ui: &mut egui::Ui) {
 		ui.centered_and_justified(|ui| {
+			ui.add_space(16.0);
 			ui.group(|ui| {
-				ui.vertical_centered(|ui| {
-					ui.heading("No Blender instances found");
-					ui.label("Drag and drop a Blender executable here to add it to the list");
+				ui.centered_and_justified(|ui| {
+					ui.vertical_centered(|ui| {
+						ui.add_space(64.0); // TODO(mathias): couldn't figure out how to center the text vertically too
+						ui.heading("No Blender instances found!");
+						ui.label("Drag and drop a Blender executable here to add it to the list.");
+					});
 				});
 			});
 		});
