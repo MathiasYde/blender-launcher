@@ -108,7 +108,10 @@ impl Application {
 			} else {
 				ScrollArea::vertical().show(ui, |ui| {
 					self.instances.iter().for_each(|instance| {
-						self.build_instance_ui(ui, instance);
+						ui.push_id(&instance.name, |ui| {
+							self.build_instance_ui(ui, instance);
+						});
+
 						ui.separator();
 					});
 				});
