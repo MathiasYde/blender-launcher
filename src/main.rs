@@ -6,7 +6,7 @@ use eframe::{Frame, NativeOptions, run_native};
 use egui::{CentralPanel, Context, ScrollArea};
 use log;
 use std::process::Command;
-use egui_modal::{Modal, ModalStyle};
+use egui_modal::{Modal};
 
 extern crate yaml_rust;
 use yaml_rust::{Yaml, YamlLoader};
