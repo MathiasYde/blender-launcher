@@ -1,6 +1,7 @@
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::Path;
 use eframe::{Frame, NativeOptions, run_native};
 use egui::{CentralPanel, Context, ScrollArea};
 use log;
@@ -11,6 +12,7 @@ extern crate yaml_rust;
 use yaml_rust::{Yaml, YamlLoader};
 
 const CONFIG_FILE_ENVIRONMENT_KEY: &str = "BLENDER_LAUNCHER_CONFIG_FILEPATH";
+const CONFIG_FILE_FILENAME: &str = "blender_launcher_config.yaml";
 
 struct BlenderInstance {
 	name: String,
@@ -51,6 +53,8 @@ impl Application {
 	fn new(_cc: &eframe::CreationContext<'_>) -> Self {
 		let mut app = Application::default();
 
+		Application::ensure_first_time_initialization();
+
 		let config_filepath = env::var(CONFIG_FILE_ENVIRONMENT_KEY);
 		Application::load_configuration(config_filepath.unwrap(), &mut app);
 
@@ -79,6 +83,32 @@ impl Application {
 		});
 
 		modal.show_dialog();
+	}
+
+	fn ensure_first_time_initialization() {
+		// create environment variable
+		if let Err(_) = env::var(CONFIG_FILE_ENVIRONMENT_KEY) {
+			log::info!("Creating environment variable: {}", CONFIG_FILE_ENVIRONMENT_KEY);
+			// set environment variable to %USERPROFILE%/blender_launcher_config.yaml
+			let value = Path::new(".")
+				.join(simple_home_dir::home_dir().unwrap().as_path())
+				.join(CONFIG_FILE_FILENAME)
+				.to_str().unwrap().to_owned();
+
+			set_env::set(CONFIG_FILE_ENVIRONMENT_KEY, value.clone()).expect("Failed to set environment variable");
+
+			// set_env::set doesn't seem to work perfectly,
+			// env::var() returns an error even though the environment variable is set
+			// so, for now we set the variable both ways
+			env::set_var(CONFIG_FILE_ENVIRONMENT_KEY, value.clone());
+		}
+
+		// create default config file
+		let config_filepath = env::var(CONFIG_FILE_ENVIRONMENT_KEY).unwrap();
+		if Path::new(&config_filepath).exists() == false {
+			log::info!("Creating default config file: {}", config_filepath);
+			Application::save_configuration(config_filepath, &Application::default());
+		}
 	}
 
 	/// Load the configuration of Blender Launcher from a YAML file
