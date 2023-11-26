@@ -1,7 +1,7 @@
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use eframe::{Frame, NativeOptions, run_native};
 use egui::{CentralPanel, Context, ScrollArea, TopBottomPanel};
 use log;
@@ -36,6 +36,18 @@ impl eframe::App for Application {
 			AppView::Instances => self.build_instances_list_ui(ctx),
 			AppView::Settings => self.build_settings_ui(ctx),
 		}
+
+		// collect dropped files
+		ctx.input(|i| {
+			if i.raw.dropped_files.is_empty() == false {
+				let dropped_files = i.raw.dropped_files.clone();
+
+				for dropped_file in dropped_files {
+					let dropped_filepath = dropped_file.path.clone().unwrap();
+					self.add_instance_from_filepath(dropped_filepath);
+				}
+			}
+		})
 	}
 }
 
@@ -59,6 +71,20 @@ impl Application {
 		Application::load_configuration(config_filepath.unwrap(), &mut app);
 
 		return app;
+	}
+
+	fn add_instance_from_filepath(&mut self, executable_path: PathBuf) {
+		let executable_filename = executable_path.file_stem().unwrap().to_str().unwrap();
+
+		let instance_name = executable_filename.to_string();
+		let instance_path = executable_path.to_str().unwrap().to_string();
+
+		self.instances.push(BlenderInstance {
+			name: instance_name,
+			path: instance_path,
+		});
+
+		Application::save_configuration(self);
 	}
 
 	fn build_instances_list_ui(&mut self, ctx: &Context) {
