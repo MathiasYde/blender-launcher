@@ -30,12 +30,16 @@ impl eframe::App for Application {
 			ui.heading(format!("Blender Launcher v{}", self.version));
 			ui.separator();
 
-			ScrollArea::vertical().show(ui, |ui| {
-				self.instances.iter().for_each(|instance| {
-					self.build_instance_ui(ui, instance);
-					ui.separator();
+			if self.instances.len() == 0 {
+				ui.label("No Blender instances found");
+			} else {
+				ScrollArea::vertical().show(ui, |ui| {
+					self.instances.iter().for_each(|instance| {
+						self.build_instance_ui(ui, instance);
+						ui.separator();
+					});
 				});
-			})
+			}
 		});
 	}
 }
