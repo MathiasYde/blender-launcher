@@ -148,8 +148,31 @@ impl Application {
 			});
 		});
 
+		let mut reset_modal = Modal::new(ctx, "factory reset");
+		reset_modal.show(|ui| {
+			reset_modal.title(ui,"Confirm factory reset");
+			reset_modal.frame(ui, |ui| {
+				reset_modal.body(ui,"Are you sure you want to reset Blender Launcher to its default settings?");
+			});
+
+			reset_modal.buttons(ui, |ui| {
+				if ui.button("Cancel").clicked() {
+					reset_modal.close();
+				}
+
+				if ui.button("Confirm").clicked() {
+					log::info!("Factory resetting Blender Launcher");
+					*self = Application::default();
+					Application::save_configuration(self);
+					reset_modal.close();
+				}
+			});
+		});
+
 		CentralPanel::default().show(ctx, |ui| {
-			ui.label("There are no settings here!");
+			if ui.button("Factory reset settings").clicked() {
+				reset_modal.open();
+			}
 		});
 	}
 
