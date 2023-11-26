@@ -107,13 +107,13 @@ impl Application {
 				self.build_no_instances_ui(ui);
 			} else {
 				ScrollArea::vertical().show(ui, |ui| {
-					self.instances.iter().for_each(|instance| {
-						ui.push_id(&instance.name, |ui| {
+					for (i, instance) in self.instances.iter().enumerate() {
+						ui.push_id(i, |ui| {
 							self.build_instance_ui(ui, instance);
 						});
 
 						ui.separator();
-					});
+					}
 				});
 			}
 		});
