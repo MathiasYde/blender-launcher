@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use eframe::{Frame, NativeOptions, run_native};
-use egui::{CentralPanel, Context, ScrollArea};
+use egui::{CentralPanel, Context, ScrollArea, TopBottomPanel};
 use log;
 use std::process::Command;
 use egui_modal::{Modal};
@@ -19,34 +19,30 @@ struct BlenderInstance {
 	path: String,
 }
 
+enum AppView {
+	Instances, // "home" view
+	Settings,
+}
+
 struct Application {
+	current_view: AppView,
 	version: String,
 	instances: Vec<BlenderInstance>,
 }
 
 impl eframe::App for Application {
 	fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-		CentralPanel::default().show(ctx, |ui| {
-			ui.heading(format!("Blender Launcher v{}", self.version));
-			ui.separator();
-
-			if self.instances.len() == 0 {
-				ui.label("No Blender instances found");
-			} else {
-				ScrollArea::vertical().show(ui, |ui| {
-					self.instances.iter().for_each(|instance| {
-						self.build_instance_ui(ui, instance);
-						ui.separator();
-					});
-				});
-			}
-		});
+		match self.current_view {
+			AppView::Instances => self.build_instances_list_ui(ctx),
+			AppView::Settings => self.build_settings_ui(ctx),
+		}
 	}
 }
 
 impl Default for Application {
 	fn default() -> Self {
 		Self {
+			current_view: AppView::Instances,
 			version: env!("CARGO_PKG_VERSION").to_string(),
 			instances: Vec::new(),
 		}
@@ -63,6 +59,65 @@ impl Application {
 		Application::load_configuration(config_filepath.unwrap(), &mut app);
 
 		return app;
+	}
+
+	fn build_instances_list_ui(&mut self, ctx: &Context) {
+		TopBottomPanel::top("top_panel").show(ctx, |ui| {
+			ui.horizontal(|ui| {
+				ui.label("Blender Launcher");
+				ui.label(format!("v{}", self.version));
+
+				ui.with_layout(egui::Layout::right_to_left(Default::default()), |ui| {
+					if ui.button("Settings").clicked() {
+						self.current_view = AppView::Settings;
+					}
+				});
+			});
+		});
+
+
+		CentralPanel::default().show(ctx, |ui| {
+			if self.instances.len() == 0 {
+				self.build_no_instances_ui(ui);
+			} else {
+				ScrollArea::vertical().show(ui, |ui| {
+					self.instances.iter().for_each(|instance| {
+						self.build_instance_ui(ui, instance);
+						ui.separator();
+					});
+				});
+			}
+		});
+	}
+
+	fn build_no_instances_ui(&mut self, ui: &mut egui::Ui) {
+		ui.centered_and_justified(|ui| {
+			ui.group(|ui| {
+				ui.vertical_centered(|ui| {
+					ui.heading("No Blender instances found");
+					ui.label("Drag and drop a Blender executable here to add it to the list");
+				});
+			});
+		});
+	}
+
+	fn build_settings_ui(&mut self, ctx: &Context) {
+		TopBottomPanel::top("top_panel").show(ctx, |ui| {
+			ui.horizontal(|ui| {
+				ui.label("Blender Launcher");
+				ui.label(format!("v{}", self.version));
+
+				ui.with_layout(egui::Layout::right_to_left(Default::default()), |ui| {
+					if ui.button("Instances").clicked() {
+						self.current_view = AppView::Instances;
+					}
+				});
+			});
+		});
+
+		CentralPanel::default().show(ctx, |ui| {
+			ui.label("There are no settings here!");
+		});
 	}
 
 	fn build_instance_ui(&self, ui: &mut egui::Ui, instance: &BlenderInstance) {
