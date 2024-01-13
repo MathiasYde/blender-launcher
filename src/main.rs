@@ -28,6 +28,9 @@ struct Application {
 	current_view: AppView,
 	version: String,
 	instances: Vec<BlenderInstance>,
+
+	// settings
+	launch_on_system_startup: bool,
 }
 
 impl eframe::App for Application {
@@ -55,6 +58,7 @@ impl Default for Application {
 	fn default() -> Self {
 		Self {
 			current_view: AppView::Instances,
+			launch_on_system_startup: false,
 			version: env!("CARGO_PKG_VERSION").to_string(),
 			instances: Vec::new(),
 		}
@@ -148,7 +152,7 @@ impl Application {
 			});
 		});
 
-		let mut reset_modal = Modal::new(ctx, "factory reset");
+		let reset_modal = Modal::new(ctx, "factory reset");
 		reset_modal.show(|ui| {
 			reset_modal.title(ui,"Confirm factory reset");
 			reset_modal.frame(ui, |ui| {
@@ -195,6 +199,19 @@ impl Application {
 				ui.label(&instance.name);
 				ui.label(&instance.path);
 			});
+		}).response.context_menu(|ui| {
+
+			if ui.button("Rename").clicked() {
+				log::info!("Renaming Blender instance: {}", instance.name);
+				todo!();
+			}
+
+			ui.separator(); // danger zone from here on now
+
+			if ui.button("Remove").clicked() {
+				log::info!("Removing Blender instance: {}", instance.name);
+				todo!();
+			}
 		});
 
 		modal.show_dialog();
@@ -222,7 +239,7 @@ impl Application {
 		let config_filepath = env::var(CONFIG_FILE_ENVIRONMENT_KEY).unwrap();
 		if Path::new(&config_filepath).exists() == false {
 			log::info!("Creating default config file: {}", config_filepath);
-			Application::save_configuration(config_filepath, &Application::default());
+			Application::save_configuration(&Application::default());
 		}
 	}
 
@@ -236,9 +253,13 @@ impl Application {
 		file.read_to_string(&mut yaml).expect("Unable to read config file");
 
 		let doc = YamlLoader::load_from_str(&*yaml).unwrap()[0].clone();
-		let _settings_doc = &doc["settings"];
+		let settings_doc = &doc["settings"];
 		let instances_doc = &doc["instances"];
 
+		// load settings
+		app.launch_on_system_startup = settings_doc["launch_on_system_startup"].as_bool().unwrap();
+
+		// load instances
 		instances_doc.as_vec().unwrap().iter().for_each(|instance_doc| {
 			let name = instance_doc["name"].as_str().unwrap();
 			let path = instance_doc["path"].as_str().unwrap();
@@ -251,7 +272,9 @@ impl Application {
 	}
 
 	/// Save the configuration of Blender Launcher to a YAML file
-	fn save_configuration(config_filepath: String, app: &Application) {
+	fn save_configuration(app: &Application) {
+		let config_filepath = env::var(CONFIG_FILE_ENVIRONMENT_KEY).unwrap();
+
 		log::info!("Saving configuration to: {}", config_filepath);
 
 		let mut yaml_text = String::new(); {
@@ -259,7 +282,7 @@ impl Application {
 			let mut doc = yaml_rust::yaml::Hash::new();
 
 			let mut settings = yaml_rust::yaml::Hash::new();
-			settings.insert(Yaml::String("launch_on_system_startup".to_string()), Yaml::Boolean(false));
+			settings.insert(Yaml::String("launch_on_system_startup".to_string()), Yaml::Boolean(app.launch_on_system_startup));
 
 			let mut instances = yaml_rust::yaml::Array::new();
 			app.instances.iter().for_each(|instance| {
@@ -297,7 +320,12 @@ fn main() {
 
 	run_native(
 		"Blender Launcher",
-		NativeOptions::default(),
-		Box::new(|cc| Box::new(Application::new(cc)))
+		NativeOptions {
+			// persist_window: true // TODO(mathias): enable persistence
+			..Default::default()
+		},
+		Box::new(|cc| {
+			Box::new(Application::new(cc))
+		})
 	).expect("Unable to initialize application");
 }
