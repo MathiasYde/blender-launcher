@@ -14,6 +14,7 @@ use yaml_rust::{Yaml, YamlLoader};
 const CONFIG_FILE_ENVIRONMENT_KEY: &str = "BLENDER_LAUNCHER_CONFIG_FILEPATH";
 const CONFIG_FILE_FILENAME: &str = "blender_launcher_config.yaml";
 
+#[derive(Clone)]
 struct BlenderInstance {
 	name: String,
 	path: String,
@@ -77,16 +78,31 @@ impl Application {
 		return app;
 	}
 
-	fn add_instance_from_filepath(&mut self, executable_path: PathBuf) {
-		let executable_filename = executable_path.file_stem().unwrap().to_str().unwrap();
+	fn add_instance_from_filepath(&mut self, filepath: PathBuf) {
+		let is_folder = filepath.is_dir();
+		let is_executable = filepath.extension().unwrap().to_str().unwrap() == "exe";
 
-		let instance_name = executable_filename.to_string();
-		let instance_path = executable_path.to_str().unwrap().to_string();
+		if is_folder == true && is_executable == false {
+			// take on the name of the folder and just assume the executable is in the folder
+			let instance_name = filepath.file_name().unwrap().to_str().unwrap();
+			let instance_path = filepath.join("blender.exe").to_str().unwrap().to_string();
 
-		self.instances.push(BlenderInstance {
-			name: instance_name,
-			path: instance_path,
-		});
+			self.instances.push(BlenderInstance {
+				name: instance_name.to_string(),
+				path: instance_path,
+			});
+		}
+
+		if is_folder == false && is_executable == true {
+			// take on the name from the parent folder
+			let instance_name = filepath.parent().unwrap().file_name().unwrap().to_str().unwrap();
+			let instance_path = filepath.to_str().unwrap().to_string();
+
+			self.instances.push(BlenderInstance {
+				name: instance_name.to_string(),
+				path: instance_path,
+			});
+		}
 
 		Application::save_configuration(self);
 	}
@@ -105,21 +121,21 @@ impl Application {
 			});
 		});
 
-
 		CentralPanel::default().show(ctx, |ui| {
 			if self.instances.len() == 0 {
 				self.build_no_instances_ui(ui);
-			} else {
-				ScrollArea::vertical().show(ui, |ui| {
-					for (i, instance) in self.instances.iter().enumerate() {
-						ui.push_id(i, |ui| {
-							self.build_instance_ui(ui, instance);
-						});
-
-						ui.separator();
-					}
-				});
+				return;
 			}
+
+			ScrollArea::vertical().show(ui, |ui| {
+				for i in 0..self.instances.len() {
+					ui.push_id(i, |ui| {
+						self.build_instance_ui(ui, i);
+					});
+
+					ui.separator();
+				}
+			});
 		});
 	}
 
@@ -180,12 +196,13 @@ impl Application {
 		});
 	}
 
-	fn build_instance_ui(&self, ui: &mut egui::Ui, instance: &BlenderInstance) {
+	fn build_instance_ui(&mut self, ui: &mut egui::Ui, instance_index: usize) {
 		let mut modal = Modal::new(ui.ctx(), "Error!");
+		let instance = self.instances.get(instance_index).unwrap().clone();
 
 		ui.horizontal(|ui| {
 			if ui.button("Launch").clicked() {
-				if let Err(error) = self.launch_instance(instance) {
+				if let Err(error) = self.launch_instance(&instance) {
 					log::error!("Unable to launch Blender instance: {}", error);
 
 					modal.dialog()
@@ -201,16 +218,34 @@ impl Application {
 			});
 		}).response.context_menu(|ui| {
 
-			if ui.button("Rename").clicked() {
-				log::info!("Renaming Blender instance: {}", instance.name);
-				todo!();
+			// if ui.button("Rename").clicked() {
+			// 	log::info!("Renaming Blender instance: {}", instance.name);
+			//
+			//  let new_name = ???
+			//
+			// 	self.instances.get_mut(instance_index).unwrap().name = new_name.to_string();
+			// 	Application::save_configuration(self);
+			// }
+
+			// TODO(mathias): i don't know how to make a dialog with a text input,
+			// so for now we just use a text edit field directly in the context menu
+			let name_response = ui.text_edit_singleline(&mut self.instances.get_mut(instance_index).unwrap().name);
+			if name_response.changed() {
+				// ideally we wouldn't use .changed, since it saves the config file on every key press,
+				// but .lost_focus doesn't trigger if the user clicks outside the context menu to dismiss it
+				// (seemingly because using the mouse to close the context menu doesn't count as losing *keyboard* focus)
+				Application::save_configuration(self);
 			}
 
 			ui.separator(); // danger zone from here on now
 
 			if ui.button("Remove").clicked() {
 				log::info!("Removing Blender instance: {}", instance.name);
-				todo!();
+
+				// remove instance from list
+				modal.close();
+				self.instances.remove(instance_index);
+				Application::save_configuration(self);
 			}
 		});
 
@@ -218,7 +253,7 @@ impl Application {
 	}
 
 	fn ensure_first_time_initialization() {
-		// create environment variable
+		// create environment variable if it doesn't exist
 		if let Err(_) = env::var(CONFIG_FILE_ENVIRONMENT_KEY) {
 			log::info!("Creating environment variable: {}", CONFIG_FILE_ENVIRONMENT_KEY);
 			// set environment variable to %USERPROFILE%/blender_launcher_config.yaml
@@ -235,11 +270,11 @@ impl Application {
 			env::set_var(CONFIG_FILE_ENVIRONMENT_KEY, value.clone());
 		}
 
-		// create default config file
+		// create default config file if it doesn't exist
 		let config_filepath = env::var(CONFIG_FILE_ENVIRONMENT_KEY).unwrap();
 		if Path::new(&config_filepath).exists() == false {
 			log::info!("Creating default config file: {}", config_filepath);
-			Application::save_configuration(&Application::default());
+			Application::save_configuration(&mut Application::default());
 		}
 	}
 
@@ -264,6 +299,12 @@ impl Application {
 			let name = instance_doc["name"].as_str().unwrap();
 			let path = instance_doc["path"].as_str().unwrap();
 
+			// check if the blender executable still exists (as in if the user has deleted the folder)
+			if Path::new(path).exists() == false {
+				log::warn!("Blender instance '{}' no longer exists, skipping", name);
+				return;
+			}
+
 			app.instances.push(BlenderInstance {
 				name: name.to_string(),
 				path: path.to_string(),
@@ -272,7 +313,7 @@ impl Application {
 	}
 
 	/// Save the configuration of Blender Launcher to a YAML file
-	fn save_configuration(app: &Application) {
+	fn save_configuration(app: &mut Application) {
 		let config_filepath = env::var(CONFIG_FILE_ENVIRONMENT_KEY).unwrap();
 
 		log::info!("Saving configuration to: {}", config_filepath);
